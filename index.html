@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2-10 상식 퀴즈</title>
+    <!-- React, Babel, Tailwind CSS CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+        body { 
+            font-family: 'Noto Sans KR', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .animate-pop { animation: pop 0.3s ease-out; }
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        /* Lucide icon replacement fix */
+        .icon-container svg {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        /**
+         * Icon 컴포넌트: 
+         * Lucide 아이콘이 DOM을 직접 교체하여 React와 충돌하는 문제를 방지하기 위해
+         * span 래퍼를 사용하고 innerHTML을 통해 관리합니다.
+         */
+        const Icon = ({ name, className = "w-6 h-6" }) => {
+            const wrapperRef = useRef(null);
+
+            useEffect(() => {
+                if (window.lucide && wrapperRef.current) {
+                    // React의 DOM 관리를 방해하지 않도록 내부를 수동으로 업데이트
+                    wrapperRef.current.innerHTML = `<i data-lucide="${name}" class="${className}"></i>`;
+                    window.lucide.createIcons({
+                        root: wrapperRef.current
+                    });
+                }
+            }, [name, className]);
+
+            return <span ref={wrapperRef} className="inline-flex items-center justify-center pointer-events-none"></span>;
+        };
+
+        const App = () => {
+            const [currentStep, setCurrentStep] = useState('start');
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const [score, setScore] = useState(0);
+            const [showFeedback, setShowFeedback] = useState(false);
+            const [selectedOption, setSelectedOption] = useState(null);
+
+            const questions = [
+                {
+                    category: "공간의 예절",
+                    question: "복도나 교실 바닥에 연필이나 물건이 떨어져 있다면?",
+                    options: [
+                        { text: "내 것이 아니니 그냥 지나간다.", isCorrect: false },
+                        { text: "나와 친구의 안전을 위해 즉시 주워 주인에게 전해준다.", isCorrect: true }
+                    ],
+                    explanation: "물건이 떨어져 있으면 발에 걸려 넘어지는 등 사고가 날 수 있어요. 바로 줍는 것이 우리 모두의 안전을 지키는 길입니다!",
+                    icon: "trash-2", iconColor: "text-blue-500"
+                },
+                {
+                    category: "소유의 예절",
+                    question: "친구의 물건이 너무 예뻐서 한 번 만져보고 싶을 때?",
+                    options: [
+                        { text: "친한 친구니까 그냥 한 번 만져보고 돌려놓는다.", isCorrect: false },
+                        { text: "아무리 친해도 반드시 허락을 구한 뒤 만진다.", isCorrect: true }
+                    ],
+                    explanation: "남의 물건을 허락 없이 만지는 것은 예의가 아니에요. 소중한 물건일수록 상대방의 의사를 먼저 물어봐야 합니다.",
+                    icon: "user", iconColor: "text-purple-500"
+                },
+                {
+                    category: "학습의 예절",
+                    question: "소중한 내 물건을 잃어버리지 않기 위한 가장 확실한 방법은?",
+                    options: [
+                        { text: "무조건 이름을 쓴다.", isCorrect: true },
+                        { text: "사물함 깊숙이 숨겨둔다.", isCorrect: false }
+                    ],
+                    explanation: "이름 없는 물건은 주인을 찾아줄 수 없어요! 분실 방지의 기본 중의 기본은 '이름 쓰기'입니다.",
+                    icon: "award", iconColor: "text-yellow-500"
+                },
+                {
+                    category: "학습의 예절",
+                    question: "값비싼 게임기나 고가의 귀중품, 학교에 가져와도 될까?",
+                    options: [
+                        { text: "친구들에게 자랑하고 싶으니 가져와도 된다.", isCorrect: false },
+                        { text: "학교는 공부하는 곳! 분실 위험이 있는 고가품은 집에 둔다.", isCorrect: true }
+                    ],
+                    explanation: "학교는 함께 공부하는 공간입니다. 분실이나 파손 시 큰 갈등이 생길 수 있는 귀중품은 가져오지 않는 것이 상책!",
+                    icon: "trophy", iconColor: "text-orange-500"
+                },
+                {
+                    category: "소통의 예절",
+                    question: "선생님께 연락을 드릴 때 가장 올바른 첫 인사는?",
+                    options: [
+                        { text: "선생님 안녕하세요, 2-10 누구입니다.", isCorrect: true },
+                        { text: "선생님, 저 궁금한 게 있어서 연락드렸어요.", isCorrect: false }
+                    ],
+                    explanation: "자신의 소속과 성함을 밝히고 인사하는 것은 온라인 소통의 기본 매너입니다. 선생님도 누군지 바로 알 수 있어 좋아요!",
+                    icon: "message-circle", iconColor: "text-green-500"
+                },
+                {
+                    category: "언어의 예절",
+                    question: "친구에게 부탁을 하거나 도움을 받았을 때 꼭 해야 할 말은?",
+                    options: [
+                        { text: "쑥스러우니까 그냥 넘어간다.", isCorrect: false },
+                        { text: "'도와줄 수 있니?', '빌려줘서 고마워!'라고 말한다.", isCorrect: true }
+                    ],
+                    explanation: "부탁과 감사는 아낄수록 손해예요. 따뜻한 말 한마디가 우리 반의 분위기를 바꿉니다.",
+                    icon: "heart", iconColor: "text-red-500"
+                },
+                {
+                    category: "갈등의 예절",
+                    question: "친구에 대한 불만이 생겼을 때 가장 올바른 대처는?",
+                    options: [
+                        { text: "다른 친구들에게 뒷담화를 하며 속을 푼다.", isCorrect: false },
+                        { text: "당사자에게 정중히 말하거나 선생님께 도움을 요청한다.", isCorrect: true }
+                    ],
+                    explanation: "뒷말은 비겁하고 앞말은 당당해야 합니다. 건강한 관계를 위해 정면으로 소통하거나 선생님을 믿어주세요.",
+                    icon: "user", iconColor: "text-indigo-500"
+                },
+                {
+                    category: "청결의 예절",
+                    question: "방금 쉬는 시간이 끝났다. 내 책상 주변에 쓰레기가 있다면?",
+                    options: [
+                        { text: "내가 버린 게 아니니 그냥 둔다.", isCorrect: false },
+                        { text: "내가 버린 게 아니더라도 책임지고 치운다.", isCorrect: true }
+                    ],
+                    explanation: "내 주변의 깨끗함은 나의 인격입니다. '같이의 가치'를 실현하는 작은 행동이죠!",
+                    icon: "trash-2", iconColor: "text-emerald-500"
+                },
+                {
+                    category: "인사의 예절",
+                    question: "복도에서 우리 반 선생님이 아닌 다른 분을 만났을 때?",
+                    options: [
+                        { text: "누구보다 밝고 크게 인사한다.", isCorrect: true },
+                        { text: "모르는 선생님이니까 고개를 숙이고 지나간다.", isCorrect: false }
+                    ],
+                    explanation: "2학년 10반의 품격은 인사에서 나옵니다. 모든 교직원분들께 예의를 갖추는 멋진 사람이 듭시다!",
+                    icon: "award", iconColor: "text-pink-500"
+                }
+            ];
+
+            const handleStart = () => {
+                setCurrentStep('quiz');
+                setCurrentQuestion(0);
+                setScore(0);
+                setShowFeedback(false);
+                setSelectedOption(null);
+            };
+
+            const handleAnswer = (isCorrect, index) => {
+                if (showFeedback) return;
+                setSelectedOption(index);
+                setShowFeedback(true);
+                if (isCorrect) setScore(score + 1);
+            };
+
+            const handleNext = () => {
+                if (currentQuestion < questions.length - 1) {
+                    setCurrentQuestion(currentQuestion + 1);
+                    setShowFeedback(false);
+                    setSelectedOption(null);
+                } else {
+                    setCurrentStep('result');
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-4">
+                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
+                        
+                        {currentStep === 'start' && (
+                            <div className="p-10 text-center animate-pop">
+                                <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <span className="text-5xl">🍪</span>
+                                </div>
+                                <h1 className="text-4xl font-black mb-4 text-slate-900 tracking-tight">이건 기본이잖아?</h1>
+                                <p className="text-slate-500 mb-10 text-xl leading-relaxed">
+                                    2학년 10반의 품격을 결정하는<br/> 
+                                    <span className="text-blue-600 font-bold border-b-4 border-blue-100 pb-1">기본 상식 퀴즈</span>에 도전해보세요!
+                                </p>
+                                <button 
+                                    onClick={handleStart}
+                                    className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-2xl font-black transition-all active:scale-95 shadow-lg flex items-center justify-center gap-3"
+                                >
+                                    퀴즈 시작하기 <Icon name="arrow-right" className="w-8 h-8" />
+                                </button>
+                            </div>
+                        )}
+
+                        {currentStep === 'quiz' && (
+                            <div className="p-8">
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className="px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-bold tracking-tight">
+                                        {questions[currentQuestion].category}
+                                    </span>
+                                    <span className="text-slate-400 font-bold">
+                                        {currentQuestion + 1} / {questions.length}
+                                    </span>
+                                </div>
+                                
+                                <div className="w-full h-3 bg-slate-100 rounded-full mb-10 overflow-hidden">
+                                    <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}></div>
+                                </div>
+                                
+                                <div className="flex flex-col items-center mb-10">
+                                    <div className="mb-6 bg-slate-50 p-6 rounded-full flex items-center justify-center w-24 h-24">
+                                        <Icon name={questions[currentQuestion].icon} className={`w-12 h-12 ${questions[currentQuestion].iconColor}`} />
+                                    </div>
+                                    <h2 className="text-3xl font-black text-center leading-tight text-slate-800 break-keep px-2">
+                                        {questions[currentQuestion].question}
+                                    </h2>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {questions[currentQuestion].options.map((option, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => handleAnswer(option.isCorrect, index)}
+                                            disabled={showFeedback}
+                                            className={`w-full p-6 rounded-2xl text-left transition-all flex items-center justify-between border-4 outline-none ${
+                                                showFeedback
+                                                    ? option.isCorrect
+                                                        ? 'bg-green-50 border-green-500 text-green-700'
+                                                        : selectedOption === index
+                                                            ? 'bg-red-50 border-red-500 text-red-700'
+                                                            : 'bg-white border-slate-50 text-slate-300'
+                                                    : 'bg-white border-slate-100 hover:border-blue-400 hover:bg-blue-50 text-slate-700 shadow-sm'
+                                            }`}
+                                        >
+                                            <span className="text-xl font-bold leading-snug">{option.text}</span>
+                                            {showFeedback && option.isCorrect && <Icon name="check-circle" className="w-8 h-8 text-green-500" />}
+                                            {showFeedback && !option.isCorrect && selectedOption === index && <Icon name="x-circle" className="w-8 h-8 text-red-500" />}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {showFeedback && (
+                                    <div className="mt-10 animate-pop">
+                                        <div className="bg-slate-50 p-8 rounded-3xl border-2 border-slate-200">
+                                            <h4 className="font-black text-slate-800 text-xl mb-3 flex items-center gap-2">
+                                                💡 담임샘의 한마디
+                                            </h4>
+                                            <p className="text-slate-600 text-lg leading-relaxed break-keep">
+                                                {questions[currentQuestion].explanation}
+                                            </p>
+                                        </div>
+                                        <button 
+                                            onClick={handleNext}
+                                            className="w-full mt-8 py-5 bg-slate-900 hover:bg-black text-white rounded-2xl text-xl font-black transition-all shadow-xl flex items-center justify-center gap-3"
+                                        >
+                                            다음 문제로 <Icon name="arrow-right" className="w-6 h-6" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {currentStep === 'result' && (
+                            <div className="p-12 text-center animate-pop">
+                                <div className="mb-8 relative inline-block">
+                                    <Icon name="trophy" className="w-32 h-32 text-yellow-500 mx-auto" />
+                                    <div className="absolute -top-4 -right-4 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center font-black text-2xl border-4 border-white shadow-lg">
+                                        🍪
+                                    </div>
+                                </div>
+                                <h2 className="text-4xl font-black mb-2 text-slate-900">퀴즈 결과</h2>
+                                <p className="text-slate-500 mb-8 text-xl font-medium">여러분이 획득한 상식 쿠키</p>
+                                <div className="text-8xl font-black text-blue-600 mb-10 tracking-tighter">
+                                    {score} <span className="text-4xl text-slate-300">/ {questions.length}</span>
+                                </div>
+                                
+                                <div className="bg-blue-50 p-8 rounded-[2rem] mb-10 border-2 border-blue-100">
+                                    <p className="text-blue-900 text-xl font-bold leading-relaxed break-keep">
+                                        {score === questions.length 
+                                            ? "완벽합니다! 2-10반의 진정한 품격 리더군요. 쿠키를 받을 자격이 충분해요! 🍪" 
+                                            : score >= 6 
+                                                ? "훌륭해요! 대부분의 기본을 잘 알고 있군요. 우리 반의 기둥이 되어주세요!" 
+                                                : "조금 더 노력이 필요해요! 기본을 지킬 때 우리 반은 더 행복해질 수 있습니다."}
+                                    </p>
+                                </div>
+
+                                <button 
+                                    onClick={handleStart}
+                                    className="w-full py-5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xl font-black transition-all flex items-center justify-center gap-3 mb-6"
+                                >
+                                    <Icon name="rotate-ccw" className="w-6 h-6" /> 다시 도전하기
+                                </button>
+                                <p className="text-slate-400 font-bold">기본이 바로 선 사람이 가장 멋진 사람입니다. - 담임샘 -</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
